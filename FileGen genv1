@@ -1,0 +1,86 @@
+import sys, os, os.path
+from scipy.io import wavfile
+import pandas as pd
+
+input_filename = input("Input wav file name:")
+if input_filename[-4:] != '.wav':
+    print('file needs to end in .wav')
+    sys.exit()
+
+samrate, data = wavfile.read(str('./wavfile/' + input_filename))
+
+#default to my understanding of wav files
+dataPointsPerSecondinWav = 48000
+
+#current default of our game
+notesPerSecond = 8
+
+#percential choice
+percential = 95
+
+#noterange
+noterange = 2
+
+dataPointsPerNote = dataPointsPerSecondinWav/notesPerSecond
+
+wavData = pd.DataFrame(data)
+
+if len(wavData.columns) == 2:
+    wavData.columns = ['R', 'L']
+
+elif len(wavData.columns) == 1:
+    wavData.columns = ['L']
+
+titleformat = {'id':[], 'mean':[], 'max':[], (str(percential)+"%"):[]}
+representationData = pd.DataFrame(titleformat)
+
+wavColstoProcess = len(wavData)
+processedCols = 0
+
+while(dataPointsPerNote <= wavColstoProcess):
+    wavColstoProcess = wavColstoProcess - dataPointsPerNote
+    tempRep = (wavData.iloc[int(processedCols):int(processedCols+dataPointsPerNote)].abs().describe(percentiles=[percential/100]))
+    representationData.loc[len(representationData.index)] = [wavColstoProcess,tempRep.loc["mean","L"],tempRep.loc["max","L"],tempRep.loc[(str(percential)+"%"),"L"]]
+    processedCols = processedCols + dataPointsPerNote
+
+wavColstoProcess = len(wavData)
+processedCols = 0
+
+finalProcessMax = []
+finalProcessAt = []
+itt=0
+while(dataPointsPerNote <= wavColstoProcess):
+    wavColstoProcess = wavColstoProcess - dataPointsPerNote
+
+    rangemax=itt+noterange+1
+    rangemin=itt-noterange
+
+    if(rangemax>(len(representationData))):
+        rangemax=(len(representationData))
+
+    if(rangemin<0):
+        rangemin=0
+
+    tempPro = representationData.abs().iloc[int(rangemin):int(rangemax),3]
+
+
+    #if(tempPro.max() == representationData.abs().iloc[itt,3]):
+
+    finalProcessMax.append(tempPro.max())
+    finalProcessAt.append(representationData.abs().iloc[itt,3])
+    itt=itt+1
+
+
+
+#print(finalProcessMax)
+#print(finalProcessAt)
+
+for i in range(len(finalProcessMax)):
+    if(finalProcessMax.count(finalProcessAt[i])):
+        print("x",end=" ")
+    else:
+        print("-",end=" ")
+    if(((i+1)%4)==0):
+        print("|")
+
+#representationData.to_csv(str("levelfile_" + input_filename[:-4] + ".csv"), mode='w')
